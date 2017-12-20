@@ -84,6 +84,9 @@ modified by
 #include "common.h"
 #include "epoll.h"
 #include "udt.h"
+#include "logging.h"
+
+extern logging::Logger mglog;
 
 using namespace std;
 
@@ -478,6 +481,57 @@ int CEPoll::wait(const int eid, set<UDTSOCKET>* readfds, set<UDTSOCKET>* writefd
                ++ total;
             }
          }
+         #elif defined(WIN32)
+         const int max_events = p->second.m_sLocals.size();
+         HANDLE handles[max_events];
+         // Simiar to iOS case, it takes a timeout of 1ms.
+         int tmout = 1;
+         int nhandles = 0;
+
+         for (set<SYSSOCKET>::const_iterator i = p->second.m_sLocals.begin(); i != p->second.m_sLocals.end(); ++ i)
+         {
+           handles[nhandles++] = (HANDLE) *i;
+         }
+
+         DWORD ready = WaitForMultipleObjectsEx(nhandles, handles, FALSE, tmout, TRUE);
+
+         if (ready == WAIT_FAILED)
+         {
+            DWORD errcode = GetLastError();
+            wchar_t *msg = NULL;
+
+            FormatMessageW (FORMAT_MESSAGE_ALLOCATE_BUFFER
+                            |FORMAT_MESSAGE_IGNORE_INSERTS
+                            |FORMAT_MESSAGE_FROM_SYSTEM,
+                            NULL, errcode, 0,
+                            (LPWSTR) &msg, 0, NULL);
+
+            if (msg != NULL)
+            {
+              LOGC(mglog.Warn) << msg;
+              LocalFree(msg);
+            } else {
+              LOGC(mglog.Warn).form("Failed to wait (errcode: %d)", errcode);
+            }
+         }
+         else if (ready >= WAIT_OBJECT_0 && ready < WAIT_OBJECT_0 + max_events)
+         {
+            int index = ready - WAIT_OBJECT_0;
+
+            set<SYSSOCKET>::const_iterator it = p->second.m_sLocals.begin();
+            advance(it, index);
+            if (lrfds)
+            {
+               lrfds->insert(*it);
+               ++ total;
+            }
+            if (lwfds)
+            {
+               lwfds->insert(*it);
+               ++ total;
+            }
+         }
+
          #else
          //currently "select" is used for all non-Linux platforms.
          //faster approaches can be applied for specific systems in the future.
@@ -530,7 +584,7 @@ int CEPoll::wait(const int eid, set<UDTSOCKET>* readfds, set<UDTSOCKET>* writefd
       if ((msTimeOut >= 0) && (int64_t(CTimer::getTime() - entertime) >= msTimeOut * 1000LL))
          throw CUDTException(MJ_AGAIN, MN_XMTIMEOUT, 0);
 
-      #if defined(TARGET_OS_IOS) || defined(TARGET_OS_TV)
+      #if defined(TARGET_OS_IOS) || defined(TARGET_OS_TV) || defined(WIN32)
       #else
       CTimer::waitForEvent();
       #endif
