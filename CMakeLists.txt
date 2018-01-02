@@ -235,7 +235,7 @@ else()
 endif()
 
 else()
-set (PTHREAD_LIBRARY -lpthreadGC2)
+find_library(PTHREAD_LIBRARY NAMES pthread pthreadGC2 pthreadGC)
 endif() # if (NOT MINGW)
 
 # This is required in some projects that add some other sources
