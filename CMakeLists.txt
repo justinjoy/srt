@@ -371,7 +371,7 @@ target_include_directories(${TARGET_haicrypt}
 set_target_properties (${TARGET_haicrypt} PROPERTIES VERSION ${SRT_VERSION} SOVERSION ${SRT_VERSION_MAJOR})
 target_link_libraries(${TARGET_haicrypt} PRIVATE ${SRT_LIBS_PRIVATE} ${SSL_LIBRARIES})
 
-if ( WIN32 AND (NOT MINGW AND NOT CYGWIN) )
+if ( WIN32 AND NOT CYGWIN )
 	target_link_libraries(${TARGET_haicrypt} PRIVATE ws2_32.lib)
 	set (SRT_LIBS_PRIVATE ${SRT_LIBS_PRIVATE} ws2_32.lib)
 endif()
