@@ -97,6 +97,7 @@ if ( USE_GNUTLS )
 	endif()
  
 	pkg_check_modules (SSL REQUIRED ${SSL_REQUIRED_MODULES})
+	set (SRT_LIBS_PRIVATE ${SSL_LDFLAGS})
 
 	add_definitions(
 		-DUSE_GNUTLS=1
@@ -110,6 +111,7 @@ else()
 	find_package(OpenSSL REQUIRED)
 	set (SSL_INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR})
 	set (SSL_LIBRARIES ${OPENSSL_LIBRARIES})
+	set (SRT_LIBS_PRIVATE ${SSL_LIBRARIES})
 
 	add_definitions(
 		-DHAICRYPT_USE_OPENSSL_EVP=1
@@ -435,13 +437,15 @@ endif()
 # if your build requires it, you'd probably remove -lstdc++ from the list
 # obtained by `pkg-config --libs`.
 #
-# Some sensible solution for that is desired. Currently turned on only on demand.
-if (ENABLE_C_DEPS)
-if ( LINUX )
-	set (IFNEEDED_SRT_LDFLAGS "${IFNEEDED_SRT_LDFLAGS} -lstdc++ -lm")
-endif()
-endif()
-
+message("Adding the following implicit link libraries: ${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES}")
+foreach(LIB ${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES})
+    if(IS_ABSOLUTE ${LIB} AND EXISTS ${LIB})
+	    set(SRT_LIBS_PRIVATE ${SRT_LIBS_PRIVATE} ${LIB})
+    else()
+        set(SRT_LIBS_PRIVATE ${SRT_LIBS_PRIVATE} "-l${LIB}")
+    endif()
+endforeach()
+ 
 join_arguments(SRT_LIBS_PRIVATE ${SRT_LIBS_PRIVATE})
 
 # haisrt.pc left temporarily for backward compatibility. To be removed in future!
