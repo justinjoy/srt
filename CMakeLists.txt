@@ -452,7 +452,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/srt.pc DESTINATION lib/pkgconfig)
 
 # Applications
 
-if ( HAVE_COMPILER_GNU_COMPAT )
+if ( ENABLE_CXX11 AND HAVE_COMPILER_GNU_COMPAT )
 	message(STATUS "C++ VERSION: Setting C++11 compat flag for gnu compiler")
 	set (CFLAGS_CXX_STANDARD "-std=c++11")
 else()
